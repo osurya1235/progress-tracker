@@ -1,0 +1,55 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id         String        @id @default(uuid())
+  sessionId  String        @unique
+  shareToken String        @unique @default(uuid())
+  createdAt  DateTime      @default(now())
+  goals      Goal[]
+  records    DailyRecord[]
+}
+
+model Goal {
+  id          String        @id @default(uuid())
+  userId      String
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  emoji       String        @default("🎯")
+  archived    Boolean       @default(false)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  tasks       Task[]
+  records     DailyRecord[]
+}
+
+model Task {
+  id          String        @id @default(uuid())
+  goalId      String
+  goal        Goal          @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  title       String
+  completed   Boolean       @default(false)
+  completedAt DateTime?
+  createdAt   DateTime      @default(now())
+  records     DailyRecord[]
+}
+
+model DailyRecord {
+  id          String    @id @default(uuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date        DateTime
+  goalId      String?
+  goal        Goal?     @relation(fields: [goalId], references: [id])
+  taskId      String?
+  task        Task?     @relation(fields: [taskId], references: [id])
+  description String
+  createdAt   DateTime  @default(now())
+}
