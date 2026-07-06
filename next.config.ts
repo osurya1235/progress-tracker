@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  serverExternalPackages: ["exceljs", "@neondatabase/serverless"],
+  serverExternalPackages: ["exceljs"],
 };
 
 export default nextConfig;
