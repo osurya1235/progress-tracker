@@ -3,8 +3,8 @@ import { prisma } from "@/lib/prisma";
 
 // One-time migration helper — run once then remove
 export async function POST(request: Request) {
-  const { secret } = await request.json().catch(() => ({ secret: "" }));
-  if (secret !== process.env.MIGRATE_SECRET && secret !== "progress-migrate-2026") {
+  const authHeader = request.headers.get("x-migrate-key") ?? "";
+  if (authHeader !== "progress-migrate-2026") {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
