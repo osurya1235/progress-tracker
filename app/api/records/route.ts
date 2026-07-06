@@ -48,13 +48,16 @@ export async function POST(request: Request) {
       ? new Date(date + "T00:00:00.000Z")
       : new Date(new Date().toISOString().split("T")[0] + "T00:00:00.000Z");
 
-    const record = await prisma.dailyRecord.create({
+    const created = await prisma.dailyRecord.create({
       data: {
         userId: user.id,
         date: recordDate,
         goalId: goalId || null,
         description,
       },
+    });
+    const record = await prisma.dailyRecord.findUnique({
+      where: { id: created.id },
       include: { goal: true, task: true },
     });
 

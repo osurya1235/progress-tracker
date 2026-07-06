@@ -30,9 +30,12 @@ export async function POST(request: Request) {
     const { title, description, emoji } = await request.json();
     if (!title) return NextResponse.json({ error: "Title required" }, { status: 400 });
 
-    const goal = await prisma.goal.create({
+    const created = await prisma.goal.create({
       data: { userId: user.id, title, description: description || null, emoji: emoji || "🎯" },
-      include: { tasks: true, _count: { select: { records: true } } },
+    });
+    const goal = await prisma.goal.findUnique({
+      where: { id: created.id },
+      include: { tasks: { orderBy: { createdAt: "asc" } }, _count: { select: { records: true } } },
     });
 
     return NextResponse.json(goal, { status: 201 });
