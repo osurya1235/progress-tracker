@@ -1,22 +1,25 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 
 export async function GET() {
   const url = process.env.DATABASE_URL ?? "";
   const hasUrl = url.length > 0;
-  const urlPrefix = hasUrl ? url.substring(0, 20) + "..." : "(empty)";
+  const urlPrefix = hasUrl ? url.substring(0, 30) + "..." : "(empty)";
 
   if (!hasUrl) {
-    return NextResponse.json({ ok: false, error: "DATABASE_URL is not set", urlPrefix }, { status: 500 });
+    return NextResponse.json({ ok: false, stage: "env", error: "DATABASE_URL is empty", urlPrefix });
   }
 
+  // Test raw pg connection without Prisma
   try {
-    await Promise.race([
-      prisma.$queryRaw`SELECT 1`,
-      new Promise((_, reject) => setTimeout(() => reject(new Error("DB timeout after 8s")), 8000)),
+    const { Pool } = await import("pg");
+    const pool = new Pool({ connectionString: url, connectionTimeoutMillis: 6000, idleTimeoutMillis: 5000 });
+    const result = await Promise.race([
+      pool.query("SELECT 1 as n"),
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error("timeout after 6s")), 6000)),
     ]);
-    return NextResponse.json({ ok: true, db: "connected", urlPrefix });
+    await pool.end();
+    return NextResponse.json({ ok: true, stage: "db", rows: (result as { rows: unknown[] }).rows, urlPrefix });
   } catch (e) {
-    return NextResponse.json({ ok: false, error: String(e), urlPrefix }, { status: 500 });
+    return NextResponse.json({ ok: false, stage: "db", error: String(e), urlPrefix }, { status: 500 });
   }
 }
