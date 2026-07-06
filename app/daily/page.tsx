@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Plus, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Plus, Trash2, ChevronLeft, ChevronRight, CalendarDays } from "lucide-react";
 import Navigation from "@/components/Navigation";
 
 interface Goal {
@@ -30,7 +30,10 @@ function formatDate(date: Date) {
 }
 
 function toDateStr(date: Date) {
-  return date.toISOString().split("T")[0];
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
 }
 
 export default function DailyPage() {
@@ -42,6 +45,7 @@ export default function DailyPage() {
   const [description, setDescription] = useState("");
   const [selectedGoalId, setSelectedGoalId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const dateInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetch("/api/goals")
@@ -60,6 +64,17 @@ export default function DailyPage() {
   }, [selectedDate]);
 
   const isToday = toDateStr(selectedDate) === toDateStr(new Date());
+
+  function openDatePicker() {
+    const input = dateInputRef.current;
+    if (!input) return;
+    try {
+      (input as HTMLInputElement & { showPicker: () => void }).showPicker();
+    } catch {
+      input.focus();
+      input.click();
+    }
+  }
 
   async function addRecord() {
     if (!description.trim()) return;
@@ -103,12 +118,37 @@ export default function DailyPage() {
           >
             <ChevronLeft size={18} />
           </button>
-          <div className="flex-1 text-center">
-            <p className="font-semibold text-lg">{isToday ? "Today" : formatDate(selectedDate)}</p>
-            {!isToday && (
-              <p className="text-xs" style={{ color: "#6b6b6b" }}>{selectedDate.getFullYear()}</p>
-            )}
-          </div>
+
+          {/* Tappable date label — opens native date picker */}
+          <button
+            className="flex-1 text-center flex flex-col items-center gap-0.5 group"
+            onClick={openDatePicker}
+            title="Jump to date"
+          >
+            <p className="font-semibold text-lg leading-tight group-hover:underline">
+              {isToday ? "Today" : formatDate(selectedDate)}
+            </p>
+            <span className="flex items-center gap-1 text-xs" style={{ color: "#aaa" }}>
+              <CalendarDays size={11} />
+              {isToday ? selectedDate.getFullYear() : selectedDate.getFullYear()}
+            </span>
+          </button>
+
+          {/* Hidden native date input */}
+          <input
+            ref={dateInputRef}
+            type="date"
+            className="sr-only"
+            max={toDateStr(new Date())}
+            value={toDateStr(selectedDate)}
+            onChange={(e) => {
+              if (e.target.value) {
+                const [y, m, d] = e.target.value.split("-").map(Number);
+                setSelectedDate(new Date(y, m - 1, d));
+              }
+            }}
+          />
+
           <button
             onClick={() => !isToday && setSelectedDate((d) => addDays(d, 1))}
             disabled={isToday}
