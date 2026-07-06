@@ -17,9 +17,8 @@ export async function GET() {
     });
 
     return NextResponse.json(goals);
-  } catch (e) {
-    console.error("[GET /api/goals]", e);
-    return NextResponse.json({ error: String(e) }, { status: 500 });
+  } catch {
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }
 
@@ -37,8 +36,7 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json(goal, { status: 201 });
-  } catch (e) {
-    console.error("[POST /api/goals]", e);
-    return NextResponse.json({ error: String(e) }, { status: 500 });
+  } catch {
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }
