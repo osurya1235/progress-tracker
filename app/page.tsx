@@ -34,10 +34,17 @@ export default function HomePage() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
+    try {
+      const cached = localStorage.getItem("pt_goals");
+      if (cached) { setGoals(JSON.parse(cached)); setLoading(false); }
+    } catch {}
     fetch("/api/goals")
       .then((r) => r.json())
       .then((data) => {
-        setGoals(Array.isArray(data) ? data : []);
+        if (Array.isArray(data)) {
+          setGoals(data);
+          localStorage.setItem("pt_goals", JSON.stringify(data));
+        }
         setLoading(false);
       })
       .catch(() => setLoading(false));
@@ -53,7 +60,11 @@ export default function HomePage() {
     });
     if (res.ok) {
       const goal = await res.json();
-      setGoals((prev) => [goal, ...prev]);
+      setGoals((prev) => {
+        const updated = [goal, ...prev];
+        localStorage.setItem("pt_goals", JSON.stringify(updated));
+        return updated;
+      });
       setShowAdd(false);
       setNewTitle("");
       setNewEmoji("🎯");
@@ -66,7 +77,11 @@ export default function HomePage() {
     e.stopPropagation();
     if (!confirm("Delete this goal and all its tasks?")) return;
     await fetch(`/api/goals/${id}`, { method: "DELETE" });
-    setGoals((prev) => prev.filter((g) => g.id !== id));
+    setGoals((prev) => {
+      const updated = prev.filter((g) => g.id !== id);
+      localStorage.setItem("pt_goals", JSON.stringify(updated));
+      return updated;
+    });
   }
 
   return (

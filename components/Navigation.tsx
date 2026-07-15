@@ -1,9 +1,9 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Target, CalendarDays, BarChart2 } from "lucide-react";
+import { Target, CalendarDays, BarChart2, Notebook } from "lucide-react";
 
-type ActiveTab = "goals" | "daily" | "reports";
+type ActiveTab = "goals" | "daily" | "reports" | "lab";
 
 export default function Navigation({ active }: { active: ActiveTab }) {
   const router = useRouter();
@@ -11,6 +11,7 @@ export default function Navigation({ active }: { active: ActiveTab }) {
   const tabs = [
     { id: "goals" as ActiveTab, icon: Target, href: "/" },
     { id: "daily" as ActiveTab, icon: CalendarDays, href: "/daily" },
+    { id: "lab" as ActiveTab, icon: Notebook, href: "/lab" },
     { id: "reports" as ActiveTab, icon: BarChart2, href: "/reports" },
   ];
 

@@ -41,7 +41,7 @@ export async function POST(request: Request) {
     const user = await getOrCreateUser();
     if (!user) return NextResponse.json({ error: "No session" }, { status: 401 });
 
-    const { description, goalId, date } = await request.json();
+    const { description, goalId, taskId, date, loggedAt } = await request.json();
     if (!description) return NextResponse.json({ error: "Description required" }, { status: 400 });
 
     const recordDate = date
@@ -53,7 +53,9 @@ export async function POST(request: Request) {
         userId: user.id,
         date: recordDate,
         goalId: goalId || null,
+        taskId: taskId || null,
         description,
+        loggedAt: loggedAt ? new Date(loggedAt) : null,
       },
     });
     const record = await prisma.dailyRecord.findUnique({
