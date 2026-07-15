@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Plus, Trash2, ChevronLeft, ChevronRight, CalendarDays } from "lucide-react";
+import { Plus, Trash2, ChevronLeft, ChevronRight, CalendarDays, Tag } from "lucide-react";
 import Navigation from "@/components/Navigation";
 
 interface Task {
@@ -65,6 +65,9 @@ export default function DailyPage() {
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [logTime, setLogTime] = useState("");
   const [saving, setSaving] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editGoalId, setEditGoalId] = useState<string | null>(null);
+  const [editTaskId, setEditTaskId] = useState<string | null>(null);
   const dateInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -168,6 +171,30 @@ export default function DailyPage() {
     setSaving(false);
   }
 
+  function openEdit(record: Record) {
+    setEditingId(record.id);
+    setEditGoalId(record.goal?.id ?? null);
+    setEditTaskId(record.task?.id ?? null);
+  }
+
+  async function saveEdit(id: string) {
+    const res = await fetch(`/api/records/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ goalId: editGoalId, taskId: editTaskId }),
+    });
+    if (res.ok) {
+      const updated = await res.json();
+      const dateKey = `pt_daily_${toDateStr(selectedDate)}`;
+      setRecords((prev) => {
+        const next = prev.map((r) => (r.id === id ? updated : r));
+        localStorage.setItem(dateKey, JSON.stringify(next));
+        return next;
+      });
+    }
+    setEditingId(null);
+  }
+
   async function deleteRecord(id: string) {
     await fetch(`/api/records/${id}`, { method: "DELETE" });
     const dateKey = `pt_daily_${toDateStr(selectedDate)}`;
@@ -248,43 +275,121 @@ export default function DailyPage() {
           </div>
         )}
 
-        {records.map((record) => (
-          <div key={record.id} className="rounded-2xl p-4 group" style={{ background: "#fff" }}>
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                {(record.goal || record.task) && (
-                  <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
-                    {record.goal && (
-                      <>
-                        <span className="text-sm">{record.goal.emoji}</span>
-                        <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: "#6b6b6b" }}>
-                          {record.goal.title}
+        {records.map((record) => {
+          const isEditing = editingId === record.id;
+          const editGoal = goals.find((g) => g.id === editGoalId) ?? null;
+          const editPendingTasks = editGoal?.tasks.filter((t) => !t.completed) ?? [];
+
+          return (
+            <div key={record.id} className="rounded-2xl p-4 group" style={{ background: "#fff" }}>
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  {(record.goal || record.task) && (
+                    <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
+                      {record.goal && (
+                        <>
+                          <span className="text-sm">{record.goal.emoji}</span>
+                          <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: "#6b6b6b" }}>
+                            {record.goal.title}
+                          </span>
+                        </>
+                      )}
+                      {record.task && (
+                        <span className="text-xs" style={{ color: "#aaa" }}>
+                          → {record.task.title}
                         </span>
-                      </>
-                    )}
-                    {record.task && (
-                      <span className="text-xs" style={{ color: "#aaa" }}>
-                        → {record.task.title}
-                      </span>
-                    )}
-                  </div>
-                )}
-                <p className="font-medium text-sm leading-relaxed">{record.description}</p>
-                {displayTime(record) && (
-                  <p className="text-xs mt-2" style={{ color: "#aaa" }}>
-                    {displayTime(record)}
-                  </p>
-                )}
+                      )}
+                    </div>
+                  )}
+                  <p className="font-medium text-sm leading-relaxed">{record.description}</p>
+                  {displayTime(record) && (
+                    <p className="text-xs mt-2" style={{ color: "#aaa" }}>
+                      {displayTime(record)}
+                    </p>
+                  )}
+                </div>
+                <div className="flex items-center gap-1 ml-2 flex-shrink-0">
+                  <button
+                    onClick={() => (isEditing ? setEditingId(null) : openEdit(record))}
+                    className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg transition-all"
+                    style={{ opacity: isEditing ? 1 : undefined, color: isEditing ? "#0a0a0a" : undefined }}
+                  >
+                    <Tag size={14} />
+                  </button>
+                  <button
+                    onClick={() => deleteRecord(record.id)}
+                    className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg transition-all hover:text-red-500"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
               </div>
-              <button
-                onClick={() => deleteRecord(record.id)}
-                className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg transition-all ml-2 flex-shrink-0 hover:text-red-500"
-              >
-                <Trash2 size={14} />
-              </button>
+
+              {isEditing && (
+                <div className="mt-3 pt-3" style={{ borderTop: "1px solid #f2f2f2" }}>
+                  <p className="text-xs font-medium mb-2" style={{ color: "#6b6b6b" }}>Goal</p>
+                  <div className="flex gap-2 flex-wrap mb-2">
+                    {goals.map((g) => (
+                      <button
+                        key={g.id}
+                        onClick={() => {
+                          setEditGoalId(editGoalId === g.id ? null : g.id);
+                          setEditTaskId(null);
+                        }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all"
+                        style={{
+                          background: editGoalId === g.id ? "#0a0a0a" : "#f2f2f2",
+                          color: editGoalId === g.id ? "#fff" : "#6b6b6b",
+                        }}
+                      >
+                        <span>{g.emoji}</span>
+                        <span>{g.title}</span>
+                      </button>
+                    ))}
+                  </div>
+
+                  {editPendingTasks.length > 0 && (
+                    <>
+                      <p className="text-xs font-medium mb-2" style={{ color: "#6b6b6b" }}>Task</p>
+                      <div className="flex gap-2 flex-wrap mb-3">
+                        {editPendingTasks.map((t) => (
+                          <button
+                            key={t.id}
+                            onClick={() => setEditTaskId(editTaskId === t.id ? null : t.id)}
+                            className="px-3 py-1.5 rounded-xl text-xs font-medium transition-all"
+                            style={{
+                              background: editTaskId === t.id ? "#0a0a0a" : "#f2f2f2",
+                              color: editTaskId === t.id ? "#fff" : "#6b6b6b",
+                            }}
+                          >
+                            {t.title}
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  )}
+
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => saveEdit(record.id)}
+                      className="flex-1 py-2 text-white rounded-xl text-xs font-semibold"
+                      style={{ background: "#0a0a0a" }}
+                    >
+                      Save
+                    </button>
+                    <button
+                      onClick={() => setEditingId(null)}
+                      className="flex-1 py-2 rounded-xl text-xs font-medium"
+                      style={{ background: "#f2f2f2" }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
-          </div>
-        ))}
+          );
+        })}
 
         {showAdd && (
           <div className="rounded-2xl p-4" style={{ background: "#fff" }}>
