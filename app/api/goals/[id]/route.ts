@@ -34,8 +34,11 @@ export async function PUT(
     const { id } = await params;
     const body = await request.json();
 
-    await prisma.goal.updateMany({
-      where: { id, userId: user.id },
+    const existing = await prisma.goal.findFirst({ where: { id, userId: user.id } });
+    if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+    await prisma.goal.update({
+      where: { id },
       data: {
         ...(body.title !== undefined && { title: body.title }),
         ...(body.description !== undefined && { description: body.description }),

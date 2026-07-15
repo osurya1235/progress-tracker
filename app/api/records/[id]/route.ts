@@ -13,11 +13,13 @@ export async function PATCH(
     const { id } = await params;
     const { goalId, taskId } = await request.json();
 
-    const { count } = await prisma.dailyRecord.updateMany({
-      where: { id, userId: user.id },
+    const existing = await prisma.dailyRecord.findFirst({ where: { id, userId: user.id } });
+    if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+    await prisma.dailyRecord.update({
+      where: { id },
       data: { goalId: goalId || null, taskId: taskId || null },
     });
-    if (count === 0) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
     const record = await prisma.dailyRecord.findUnique({
       where: { id },
