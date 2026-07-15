@@ -50,8 +50,8 @@ function nowTimeStr() {
 }
 
 function displayTime(record: Record) {
-  const src = record.loggedAt ?? record.createdAt;
-  return new Date(src).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+  if (!record.loggedAt) return null;
+  return new Date(record.loggedAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
 }
 
 export default function DailyPage() {
@@ -270,9 +270,11 @@ export default function DailyPage() {
                   </div>
                 )}
                 <p className="font-medium text-sm leading-relaxed">{record.description}</p>
-                <p className="text-xs mt-2" style={{ color: "#aaa" }}>
-                  {displayTime(record)}
-                </p>
+                {displayTime(record) && (
+                  <p className="text-xs mt-2" style={{ color: "#aaa" }}>
+                    {displayTime(record)}
+                  </p>
+                )}
               </div>
               <button
                 onClick={() => deleteRecord(record.id)}
