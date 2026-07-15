@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { Plus, Trash2, ChevronLeft, ChevronRight, CalendarDays, Tag } from "lucide-react";
 import Navigation from "@/components/Navigation";
 
@@ -55,9 +56,11 @@ function displayTime(record: Record) {
 }
 
 export default function DailyPage() {
+  const router = useRouter();
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [records, setRecords] = useState<Record[]>([]);
   const [goals, setGoals] = useState<Goal[]>([]);
+  const [untaggedCount, setUntaggedCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
   const [description, setDescription] = useState("");
@@ -83,6 +86,10 @@ export default function DailyPage() {
           localStorage.setItem("pt_goals", JSON.stringify(d));
         }
       });
+
+    fetch("/api/records/untagged")
+      .then((r) => r.json())
+      .then((d) => { if (Array.isArray(d)) setUntaggedCount(d.length); });
   }, []);
 
   useEffect(() => {
@@ -178,6 +185,7 @@ export default function DailyPage() {
   }
 
   async function saveEdit(id: string) {
+    const before = records.find((r) => r.id === id);
     const res = await fetch(`/api/records/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -191,6 +199,8 @@ export default function DailyPage() {
         localStorage.setItem(dateKey, JSON.stringify(next));
         return next;
       });
+      if (!before?.goal && updated.goal) setUntaggedCount((c) => Math.max(0, c - 1));
+      if (before?.goal && !updated.goal) setUntaggedCount((c) => c + 1);
     }
     setEditingId(null);
   }
@@ -263,6 +273,22 @@ export default function DailyPage() {
       </div>
 
       <div className="px-4 space-y-3">
+        {untaggedCount > 0 && (
+          <button
+            onClick={() => router.push("/review")}
+            className="w-full rounded-2xl p-4 flex items-center justify-between text-left transition-transform active:scale-[0.98]"
+            style={{ background: "#0a0a0a" }}
+          >
+            <div className="flex items-center gap-2 text-white">
+              <Tag size={16} />
+              <span className="text-sm font-semibold">
+                {untaggedCount} {untaggedCount === 1 ? "entry" : "entries"} without a goal
+              </span>
+            </div>
+            <span className="text-xs" style={{ color: "rgba(255,255,255,0.6)" }}>Tag now →</span>
+          </button>
+        )}
+
         {loading && <div className="text-center py-12" style={{ color: "#6b6b6b" }}>Loading...</div>}
 
         {!loading && records.length === 0 && !showAdd && (
@@ -311,8 +337,8 @@ export default function DailyPage() {
                 <div className="flex items-center gap-1 ml-2 flex-shrink-0">
                   <button
                     onClick={() => (isEditing ? setEditingId(null) : openEdit(record))}
-                    className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg transition-all"
-                    style={{ opacity: isEditing ? 1 : undefined, color: isEditing ? "#0a0a0a" : undefined }}
+                    className="p-1.5 rounded-lg transition-all"
+                    style={{ color: isEditing || !record.goal ? "#0a0a0a" : "#c9c9c9" }}
                   >
                     <Tag size={14} />
                   </button>
